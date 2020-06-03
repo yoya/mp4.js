@@ -56,14 +56,38 @@ function mp4box(arrbuf, boxOffset, boxLength, realLength, template) {
     //
     const dataview = new DataView(arrbuf);
     let offset = boxOffset + 8;
+    let data = null;
     let isContainer = false;
     switch (boxType) {
+        /*
+         * no container box
+         */
+    case "ftyp":
+        let brandBytes = arr.subarray(offset, offset + 4);
+        let brand = String.fromCharCode.apply("", brandBytes);
+        let minorVersion = dataview.getUint32(offset + 4, false);
+        data = "brand:"+brand + " minorVersion:"+minorVersion + " compat:";
+        offset += 8;
+        let compatiBrands = [];
+        while (offset < boxOffset + boxLength) {
+            brandBytes = arr.subarray(offset, offset + 4);
+            brand = String.fromCharCode.apply("", brandBytes);
+            compatiBrands.push(brand);
+            offset += 4;
+        }
+        data += compatiBrands.join(",");
+        break;
+        /*
+         * container box
+         */
     case "meta":
+    case "iref":
+    case "dref":
         {
             const version_and_flag = dataview.getUint32(offset, false); // big-endian
             const version = version_and_flag >> 24;
             const flags = version_and_flag&0xffffff;
-            tr1.children[1].innerHTML = "version:"+version + " flags:"+flags;
+            data = "version:"+version + " flags:"+flags;
             offset += 4;
             isContainer = true;
         }
@@ -82,16 +106,21 @@ function mp4box(arrbuf, boxOffset, boxLength, realLength, template) {
                 count = dataview.getUint32(offset, false);
                 offset += 4;
             }
-            tr1.children[1].innerHTML = "version:"+version + " flags:"+flags +
-                " count:"+count;
+            data = "version:"+version + " flags:"+flags + " count:"+count;
             isContainer = true;
         }
         break;
+    case "moov":
+    case "trak":
+    case "mdia":
+    case "dinf":
     case "iprp":
     case "ipco":
-    case "moov":
         isContainer = true;
         break;
+    }
+    if (data !== null) {
+        tr1.children[1].innerHTML = data;
     }
     if (isContainer) {
         mp4view(arrbuf, offset, boxOffset + boxLength, maxCount, tr1.children[2], template);
