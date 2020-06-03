@@ -63,19 +63,42 @@ function mp4box(arrbuf, boxOffset, boxLength, realLength, template) {
          * no container box
          */
     case "ftyp":
-        let brandBytes = arr.subarray(offset, offset + 4);
-        let brand = String.fromCharCode.apply("", brandBytes);
-        let minorVersion = dataview.getUint32(offset + 4, false);
-        data = "brand:"+brand + " minorVersion:"+minorVersion + " compat:";
-        offset += 8;
-        let compatiBrands = [];
-        while (offset < boxOffset + boxLength) {
-            brandBytes = arr.subarray(offset, offset + 4);
-            brand = String.fromCharCode.apply("", brandBytes);
-            compatiBrands.push(brand);
-            offset += 4;
+        {
+            let brandBytes = arr.subarray(offset, offset + 4);
+            let brand = String.fromCharCode.apply("", brandBytes);
+            let minorVersion = dataview.getUint32(offset + 4, false);
+            data = "brand:"+brand + ", "+minorVersion, + " compat:";
+            offset += 8;
+            let compatiBrands = [];
+            while (offset < boxOffset + boxLength) {
+                brandBytes = arr.subarray(offset, offset + 4);
+                brand = String.fromCharCode.apply("", brandBytes);
+                compatiBrands.push(brand);
+                offset += 4;
+            }
+            data += ", "+compatiBrands.join(", ");
         }
-        data += compatiBrands.join(",");
+        break;
+    case "hdlr":
+        {
+            const tmp = dataview.getUint32(offset, false);
+            const version = tmp >> 24, flags = tmp & 0xffffff;
+            const comptypeBytes = arr.subarray(offset + 4, offset + 8);
+            const subtypeBytes = arr.subarray(offset + 8, offset + 12);
+            const comptype = String.fromCharCode.apply("", comptypeBytes);
+            const subtype  = String.fromCharCode.apply("", subtypeBytes);
+            data = "version:"+version + " flags:"+flags +
+                " type:" + comptype + " subtype:" + subtype;
+            offset += 12;
+        }
+        break;
+    case "pitm":
+        {
+            const tmp = dataview.getUint32(offset, false);
+            const version = tmp >> 24, flags = tmp & 0xffffff;
+            const itemId = dataview.getUint16(offset + 4, false);
+            data = "version:"+version + " flags:"+flags + " itemId:"+itemId;
+        }
         break;
         /*
          * container box
