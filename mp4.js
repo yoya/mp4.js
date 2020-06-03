@@ -44,8 +44,9 @@ function mp4box(arrbuf, boxOffset, boxLength, template) {
     let boxType = String.fromCharCode.apply("", boxTypeArr);
     const table = template.cloneNode(true);
     const tbody = table.children[0];
-    const [tr] = tbody.children;
-    tr.children[0].innerHTML = "length:"+boxLength+" "+"type:"+boxType;
+    const [tr0, tr1] = tbody.children;
+    tr0.children[0].innerHTML = "length:"+boxLength;
+    tr1.children[0].innerHTML = "type:"+boxType;
     //
     const dataview = new DataView(arrbuf);
     let offset = boxOffset + 8;
@@ -56,7 +57,7 @@ function mp4box(arrbuf, boxOffset, boxLength, template) {
             const version_and_flag = dataview.getUint32(offset, false); // big-endian
             const version = version_and_flag >> 24;
             const flags = version_and_flag&0xffffff;
-            tr.children[1].innerHTML = "version:"+version + " flags:"+flags;
+            tr1.children[1].innerHTML = "version:"+version + " flags:"+flags;
             offset += 4;
             isContainer = true;
         }
@@ -75,7 +76,7 @@ function mp4box(arrbuf, boxOffset, boxLength, template) {
                 count = dataview.getUint32(offset, false);
                 offset += 4;
             }
-            tr.children[1].innerHTML = "version:"+version + " flags:"+flags +
+            tr1.children[1].innerHTML = "version:"+version + " flags:"+flags +
                 " count:"+count;
             isContainer = true;
         }
@@ -86,7 +87,7 @@ function mp4box(arrbuf, boxOffset, boxLength, template) {
         break;
     }
     if (isContainer) {
-        mp4view(arrbuf, offset, boxLength, maxCount, tr.children[2], template);
+        mp4view(arrbuf, offset, boxLength, maxCount, tr1.children[2], template);
     }
     return table;
 }

@@ -3,16 +3,15 @@
     <title> MP4 Container Viewer </title>
     <style>
       table  {
-          border: 2px #888 solid;
-          background-color:#CCC;
-          margin: 4px;
           float:left;
+          margin: 4px;
+          background-color:blue;
       }
       td {
-          border: 1px #AAA solid;
+          background-color:white;
       }
       body {
-          background-color:#AAA;
+          background-color:#BBB;
       }
     </style>
     <script type="text/javascript" src="lib/drop.js"> </script>
@@ -23,7 +22,10 @@
       <table id="template">
         <tbody>
           <tr>
-            <td class="length_and_type"></td>
+            <td class="length_and_type" colspan=3></td>
+          </tr>
+          <tr>
+            <td class="type"></td>
             <td class="data"></td>
             <td class="box"></td>
           </tr>
