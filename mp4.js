@@ -84,6 +84,7 @@ function mp4box(arrbuf, boxOffset, boxLength, template) {
         break;
     case "iprp":
     case "ipco":
+    case "moov":
         isContainer = true;
         break;
     }
