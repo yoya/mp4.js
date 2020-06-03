@@ -82,13 +82,22 @@ function mp4box(arrbuf, boxOffset, boxLength, realLength, template) {
          */
     case "meta":
     case "iref":
-    case "dref":
         {
             const version_and_flag = dataview.getUint32(offset, false); // big-endian
             const version = version_and_flag >> 24;
             const flags = version_and_flag&0xffffff;
             data = "version:"+version + " flags:"+flags;
             offset += 4;
+            isContainer = true;
+        }
+        break;
+    case "dref":
+        {
+            const tmp = dataview.getUint32(offset, false);
+            const version = tmp >> 24, flags = tmp & 0xffffff;
+            const count = dataview.getUint32(offset + 4, false);
+            offset += 8;
+            data = "version:"+version + " flags:"+flags + " count:"+count;
             isContainer = true;
         }
         break;
