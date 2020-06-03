@@ -19,7 +19,7 @@ function mp4view(arrbuf, byteOffset, byteLength, maxCount, container, template) 
     const dataview = new DataView(arrbuf);
     let offset = byteOffset;
     let count = 0;
-    while (offset < byteOffset + byteLength) {
+    while (offset < byteLength) {
         let boxLength= dataview.getUint32(offset, false); // big-endian
         if (boxLength <= 4) {
             boxLength = byteLength - offset;
@@ -42,6 +42,7 @@ function mp4box(arrbuf, boxOffset, boxLength, template) {
     const arr = new Uint8Array(arrbuf);
     let boxTypeArr = arr.subarray(boxOffset + 4, boxOffset + 8);
     let boxType = String.fromCharCode.apply("", boxTypeArr);
+    console.debug(boxType, boxOffset, boxLength);
     const table = template.cloneNode(true);
     const tbody = table.children[0];
     const [tr0, tr1] = tbody.children;
@@ -87,7 +88,7 @@ function mp4box(arrbuf, boxOffset, boxLength, template) {
         break;
     }
     if (isContainer) {
-        mp4view(arrbuf, offset, boxLength, maxCount, tr1.children[2], template);
+        mp4view(arrbuf, offset, boxOffset + boxLength, maxCount, tr1.children[2], template);
     }
     return table;
 }
