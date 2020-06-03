@@ -117,7 +117,7 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
             const baseOffsetSize = (tmp >>  4) & 0xF;
             const indexSize = (version==0)? null: ((tmp >>  0) & 0xF);
             const itemCount = dataview.getUint16(offset + 6);
-            data = "version:"+version + " flags:"+flags + " itemCount:"+itemCount;
+            data = "version:"+version + " flags:"+flags + " count:"+itemCount;
             offset += 8;
             /*
             for (let i = 0 ; i < itemCount ; i++) {
