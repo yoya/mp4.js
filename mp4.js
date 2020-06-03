@@ -124,7 +124,37 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
                 let itemId = dataview.getUint16(offset);
                 console.log("itemId:"+itemId);
             }
-            */a
+            */
+        }
+        break;
+    case "url ":
+        {
+            const tmp = dataview.getUint32(offset, false);
+            const version = tmp >> 24, flags = tmp & 0xffffff;
+            const locationBytes = arr.subarray(offset + 4, boxOffset + boxLength);
+            const location = String.fromCharCode.apply("", locationBytes);
+            data = "version:"+version + " flags:"+flags +
+                " location:"+location;
+        }
+        break;
+    case "dimg":
+        {
+            const fromItemId = dataview.getUint16(offset);
+            const itemCount = dataview.getUint16(offset + 2);
+            data = "fromId:"+ fromItemId + " count:"+itemCount + " itemIds:";
+            offset += 4;
+            for (let i = 0 ; i < itemCount ; i++) {
+                if (i > 10) { // max 10
+                    data += " (omit... x "+(itemCount - i);
+                    break;
+                }
+                if (i > 0) {
+                    data += ",";
+                }
+                let itemId = dataview.getUint16(offset);
+                data += itemId;
+                offset += 2;
+            }
         }
         break;
         /*
