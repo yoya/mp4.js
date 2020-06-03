@@ -11,11 +11,11 @@ function main() {
     template.remove();
     dropFunction(document, function(arrbuf) {
         container.innerHTML = "";
-        mp4view(arrbuf, 0, arrbuf.byteLength, 9999, container, template);
+        mp4view(arrbuf, null, 0, arrbuf.byteLength, 9999, container, template);
     }, "ArrayBuffer");
 }
 
-function mp4view(arrbuf, byteOffset, byteLength, maxCount, container, template) {
+function mp4view(arrbuf, parentType, byteOffset, byteLength, maxCount, container, template) {
     const dataview = new DataView(arrbuf);
     let offset = byteOffset;
     let count = 0;
@@ -23,7 +23,8 @@ function mp4view(arrbuf, byteOffset, byteLength, maxCount, container, template) 
     while (offset < byteLength) {
         const realLength= dataview.getUint32(offset, false); // big-endian
         const boxLength = (realLength >= 8)? realLength: byteLength - offset;
-        let table = mp4box(arrbuf, offset, boxLength, realLength, template);
+        let table = mp4box(arrbuf, parentType, offset, boxLength, realLength,
+                           template);
         if (count <  maxCount) {
             container.append(table);
         } else {
@@ -39,12 +40,13 @@ function mp4view(arrbuf, byteOffset, byteLength, maxCount, container, template) 
     }
 }
 
-function mp4box(arrbuf, boxOffset, boxLength, realLength, template) {
+function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
+                template) {
     let maxCount = 10;
     const arr = new Uint8Array(arrbuf);
     let boxTypeArr = arr.subarray(boxOffset + 4, boxOffset + 8);
     let boxType = String.fromCharCode.apply("", boxTypeArr);
-    console.debug(boxType, boxOffset, boxLength);
+    // console.debug(boxType, boxOffset, boxLength);
     const table = template.cloneNode(true);
     const tbody = table.children[0];
     const [tr0, tr1] = tbody.children;
@@ -89,7 +91,6 @@ function mp4box(arrbuf, boxOffset, boxLength, realLength, template) {
             const subtype  = String.fromCharCode.apply("", subtypeBytes);
             data = "version:"+version + " flags:"+flags +
                 " type:" + comptype + " subtype:" + subtype;
-            offset += 12;
         }
         break;
     case "pitm":
@@ -98,6 +99,32 @@ function mp4box(arrbuf, boxOffset, boxLength, realLength, template) {
             const version = tmp >> 24, flags = tmp & 0xffffff;
             const itemId = dataview.getUint16(offset + 4, false);
             data = "version:"+version + " flags:"+flags + " itemId:"+itemId;
+        }
+        break;
+    case "iloc":
+        if (parentType === "iref") {
+            console.warn(parentType+"=>iloc box not implemented yet.")
+        } else {
+            // | 1 byte  |  3 bytes  |
+            // | version |   flags   |
+            let tmp = dataview.getUint32(offset, false);
+            const version = tmp >> 24, flags = tmp & 0xffffff;
+            // |   4 bits   |   4 bits   |     4 bits     |   4 bits  |
+            // | offsetSize | lengthSize | baseOffsetSize | indexSize |
+            tmp = dataview.getUint16(offset + 4);
+            const offsetSize     = (tmp >> 12) & 0xF;
+            const lengthSize     = (tmp >>  8) & 0xF;
+            const baseOffsetSize = (tmp >>  4) & 0xF;
+            const indexSize = (version==0)? null: ((tmp >>  0) & 0xF);
+            const itemCount = dataview.getUint16(offset + 6);
+            data = "version:"+version + " flags:"+flags + " itemCount:"+itemCount;
+            offset += 8;
+            /*
+            for (let i = 0 ; i < itemCount ; i++) {
+                let itemId = dataview.getUint16(offset);
+                console.log("itemId:"+itemId);
+            }
+            */a
         }
         break;
         /*
@@ -153,7 +180,7 @@ function mp4box(arrbuf, boxOffset, boxLength, realLength, template) {
         tr1.children[1].innerHTML = data;
     }
     if (isContainer) {
-        mp4view(arrbuf, offset, boxOffset + boxLength, maxCount, tr1.children[2], template);
+        mp4view(arrbuf, boxType, offset, boxOffset + boxLength, maxCount, tr1.children[2], template);
     }
     return table;
 }
