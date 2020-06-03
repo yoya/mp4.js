@@ -19,25 +19,27 @@ function mp4view(arrbuf, byteOffset, byteLength, maxCount, container, template) 
     const dataview = new DataView(arrbuf);
     let offset = byteOffset;
     let count = 0;
+    let omit_count = 0;
     while (offset < byteLength) {
-        let boxLength= dataview.getUint32(offset, false); // big-endian
-        if (boxLength <= 4) {
-            boxLength = byteLength - offset;
+        const realLength= dataview.getUint32(offset, false); // big-endian
+        const boxLength = (realLength >= 8)? realLength: byteLength - offset;
+        let table = mp4box(arrbuf, offset, boxLength, realLength, template);
+        if (count <  maxCount) {
+            container.append(table);
+        } else {
+            omit_count++;
         }
-        let table = mp4box(arrbuf, offset, boxLength, template);
-        container.append(table);
         offset += boxLength;
         count ++;
-        if (count >= maxCount) {
-            let div = document.createElement("div");
-            div.innerHTML = "(omit...)";
-            container.append(div);
-            break;
-        }
+    }
+    if (omit_count) {
+        const div = document.createElement("div");
+        div.innerHTML = "(omit...x "+omit_count+")";
+        container.append(div);
     }
 }
 
-function mp4box(arrbuf, boxOffset, boxLength, template) {
+function mp4box(arrbuf, boxOffset, boxLength, realLength, template) {
     let maxCount = 10;
     const arr = new Uint8Array(arrbuf);
     let boxTypeArr = arr.subarray(boxOffset + 4, boxOffset + 8);
@@ -46,7 +48,10 @@ function mp4box(arrbuf, boxOffset, boxLength, template) {
     const table = template.cloneNode(true);
     const tbody = table.children[0];
     const [tr0, tr1] = tbody.children;
-    tr0.children[0].innerHTML = "length:"+boxLength;
+    tr0.children[0].innerHTML = "offset:"+boxOffset+" length:"+boxLength;
+    if (boxLength !== realLength) {
+        tr0.children[0].innerHTML += "("+realLength+")";
+    }
     tr1.children[0].innerHTML = "type:"+boxType;
     //
     const dataview = new DataView(arrbuf);
