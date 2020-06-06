@@ -83,22 +83,23 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
         break;
     case "hdlr":
         {
-            const tmp = dataview.getUint32(offset, false);
-            const version = tmp >> 24, flags = tmp & 0xffffff;
+            // const tmp = dataview.getUint32(offset, false);
+            // const version = tmp >> 24, flags = tmp & 0xffffff;
             const comptypeBytes = arr.subarray(offset + 4, offset + 8);
             const subtypeBytes = arr.subarray(offset + 8, offset + 12);
             const comptype = String.fromCharCode.apply("", comptypeBytes);
             const subtype  = String.fromCharCode.apply("", subtypeBytes);
-            data = "version:"+version + " flags:"+flags +
-                " type:" + comptype + " subtype:" + subtype;
+            data = // "version:"+version + " flags:"+flags +
+                "type:" + comptype + " subtype:" + subtype;
         }
         break;
     case "pitm":
         {
-            const tmp = dataview.getUint32(offset, false);
-            const version = tmp >> 24, flags = tmp & 0xffffff;
+            // const tmp = dataview.getUint32(offset, false);
+            // const version = tmp >> 24, flags = tmp & 0xffffff;
             const itemId = dataview.getUint16(offset + 4, false);
-            data = "version:"+version + " flags:"+flags + " itemId:"+itemId;
+            data = //"version:"+version + " flags:"+flags +
+                "itemId:"+itemId;
         }
         break;
     case "iloc":
@@ -117,7 +118,8 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
             const baseOffsetSize = (tmp >>  4) & 0xF;
             const indexSize = (version==0)? null: ((tmp >>  0) & 0xF);
             const itemCount = dataview.getUint16(offset + 6);
-            data = "version:"+version + " flags:"+flags + " count:"+itemCount;
+            data = // "version:"+version + " flags:"+flags +
+                "count:"+itemCount;
             offset += 8;
             /*
             for (let i = 0 ; i < itemCount ; i++) {
@@ -129,12 +131,12 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
         break;
     case "url ":
         {
-            const tmp = dataview.getUint32(offset, false);
-            const version = tmp >> 24, flags = tmp & 0xffffff;
+            // const tmp = dataview.getUint32(offset, false);
+            // const version = tmp >> 24, flags = tmp & 0xffffff;
             const locationBytes = arr.subarray(offset + 4, boxOffset + boxLength);
             const location = String.fromCharCode.apply("", locationBytes);
-            data = "version:"+version + " flags:"+flags +
-                " location:"+location;
+            data = // "version:"+version + " flags:"+flags +
+                "location:"+location;
         }
         break;
     case "dimg":
@@ -164,19 +166,20 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
     case "iref":
         {
             const tmp = dataview.getUint32(offset, false);
-            const version = tmp >> 24, flags = tmp & 0xffffff;
-            data = "version:"+version + " flags:"+flags;
+            // const version = tmp >> 24, flags = tmp & 0xffffff;
+            // data = "version:"+version + " flags:"+flags;
             offset += 4;
             isContainer = true;
         }
         break;
     case "dref":
         {
-            const tmp = dataview.getUint32(offset, false);
-            const version = tmp >> 24, flags = tmp & 0xffffff;
+            // const tmp = dataview.getUint32(offset, false);
+            // const version = tmp >> 24, flags = tmp & 0xffffff;
             const count = dataview.getUint32(offset + 4, false);
             offset += 8;
-            data = "version:"+version + " flags:"+flags + " count:"+count;
+            data = // "version:"+version + " flags:"+flags +
+                "count:"+count;
             isContainer = true;
         }
         break;
@@ -193,7 +196,8 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
                 count = dataview.getUint32(offset, false);
                 offset += 4;
             }
-            data = "version:"+version + " flags:"+flags + " count:"+count;
+            data = // "version:"+version + " flags:"+flags +
+                "count:"+count;
             isContainer = true;
         }
         break;
