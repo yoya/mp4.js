@@ -33,9 +33,14 @@ function mp4view(arrbuf, parentType, byteOffset, byteLength, maxCount, container
         }
         if ((omit_count > 0) &&
             (uniq_count <  maxCount) || (byteLength < (offset + boxLength))) {
-            const div = document.createElement("div");
-            div.innerHTML = "(omit...x "+omit_count+")";
-            container.append(div);
+            const t = document.createElement("table");
+            const t_tr = document.createElement("tr");
+            const t_td = document.createElement("td");
+            t_td.innerHTML = "(omit..."+omit_count+")";
+            t.append(t_tr);
+            t_tr.append(t_td);
+            t.style = "border:0 ; padding:2ex;";
+            container.append(t);
             omit_count = 0;
         }
         if (uniq_count <  maxCount) {
@@ -157,8 +162,8 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
             data = "fromId:"+ fromItemId + " count:"+itemCount + " itemIds:";
             offset += 4;
             for (let i = 0 ; i < itemCount ; i++) {
-                if (i > 10) { // max 10
-                    data += " (omit... x "+(itemCount - i);
+                if (i >= 7) { // max 7
+                    data += " (omit..."+(itemCount - i)+")";;
                     break;
                 }
                 if (i > 0) {
