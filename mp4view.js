@@ -68,7 +68,7 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
     if (boxLength !== realLength) {
         tr0.children[0].innerHTML += "("+realLength+")";
     }
-    tr1.children[0].innerHTML = "type:"+boxType;
+    tr1.children[0].innerHTML = boxType;
     //
     const dataview = new DataView(arrbuf);
     let offset = boxOffset + 8;
@@ -84,7 +84,7 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
             let brandBytes = arr.subarray(offset, offset + 4);
             let brand = String.fromCharCode.apply("", brandBytes);
             let minorVersion = dataview.getUint32(offset + 4, false);
-            data = "brand:"+brand + ", "+minorVersion, + " compat:";
+            data = "brand:"+brand + ", "+minorVersion;
             offset += 8;
             let compatiBrands = [];
             while (offset < boxOffset + boxLength) {
@@ -122,8 +122,6 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
         if (parentType === "iref") {
             console.warn(parentType+"=>iloc box not implemented yet.")
         } else {
-            // | 1 byte  |  3 bytes  |
-            // | version |   flags   |
             let tmp = dataview.getUint32(offset, false);
             const version = tmp >> 24, flags = tmp & 0xffffff;
             // |   4 bits   |   4 bits   |     4 bits     |   4 bits  |
@@ -202,9 +200,9 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
             if (protectIndex > 0) {
                 data += " protectIndex:"+protectIndex;
             }
-            data += " itemType:"+itemType;
+            data += " type:"+itemType;
             if (itemName !== "") {
-                data +=+ " itemName:"+itemName;
+                data +=+ " name:"+itemName;
             }
             table.omitKey = protectIndex+":"+itemType+":"+itemName;
         }
