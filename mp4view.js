@@ -18,25 +18,34 @@ function main() {
 function mp4view(arrbuf, parentType, byteOffset, byteLength, maxCount, container, template) {
     const dataview = new DataView(arrbuf);
     let offset = byteOffset;
-    let count = 0;
+    let uniq_count = 0;
     let omit_count = 0;
+    let prev_omitKey = null;
     while (offset < byteLength) {
         const realLength= dataview.getUint32(offset, false); // big-endian
         const boxLength = (realLength >= 8)? realLength: byteLength - offset;
         let table = mp4box(arrbuf, parentType, offset, boxLength, realLength,
                            template);
-        if (count <  maxCount) {
-            container.append(table);
+        if (table.omitKey === prev_omitKey) {
+            uniq_count ++;
         } else {
-            omit_count++;
+            uniq_count = 1;
+        }
+        if ((omit_count > 0) &&
+            (uniq_count <  maxCount) || (byteLength < (offset + boxLength))) {
+            const div = document.createElement("div");
+            div.innerHTML = "(omit...x "+omit_count+")";
+            container.append(div);
+            omit_count = 0;
+        }
+        if (uniq_count <  maxCount) {
+            container.append(table);
+            omit_count = 0;
+        } else {
+            omit_count ++;
         }
         offset += boxLength;
-        count ++;
-    }
-    if (omit_count) {
-        const div = document.createElement("div");
-        div.innerHTML = "(omit...x "+omit_count+")";
-        container.append(div);
+        prev_omitKey = table.omitKey;
     }
 }
 
@@ -60,6 +69,7 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
     let offset = boxOffset + 8;
     let data = null;
     let isContainer = false;
+    table.omitKey = null;
     switch (boxType) {
         /*
          * no container box
@@ -91,6 +101,7 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
             const subtype  = String.fromCharCode.apply("", subtypeBytes);
             data = // "version:"+version + " flags:"+flags +
                 "type:" + comptype + " subtype:" + subtype;
+            table.omitKey = comptype+":"+subtype;
         }
         break;
     case "pitm":
@@ -157,6 +168,40 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
                 data += itemId;
                 offset += 2;
             }
+        }
+        break;
+    case "infe":
+        {
+            const tmp = dataview.getUint32(offset, false);
+            const version = tmp >> 24, flags = tmp & 0xffffff;
+            let itemId = dataview.getUint16(offset + 4);
+            let protectIndex = dataview.getUint16(offset + 6);
+            offset += 8;
+            let itemType = "";
+            if (version) {
+                const itemTypeBytes = arr.subarray(offset, offset + 4);
+                itemType = String.fromCharCode.apply("", itemTypeBytes);
+                offset += 4;
+            } else {
+                table.omitKey = "";
+            }
+            const lastIndex = arr.indexOf(0, offset);
+            let itemName = "";
+            if (lastIndex >= 0) {
+                const itemNameBytes = arr.subarray(offset, lastIndex);
+                itemName = String.fromCharCode.apply("", itemNameBytes);
+            } else {
+                console.warn("not fount null terminator for infe itemName");
+            }
+            data = "itemId:"+itemId;
+            if (protectIndex > 0) {
+                data += " protectIndex:"+protectIndex;
+            }
+            data += " itemType:"+itemType;
+            if (itemName !== "") {
+                data +=+ " itemName:"+itemName;
+            }
+            table.omitKey = protectIndex+":"+itemType+":"+itemName;
         }
         break;
         /*
