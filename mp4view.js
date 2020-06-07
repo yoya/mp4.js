@@ -86,9 +86,9 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
     table.omitKey = null;
     table.boxType = boxType; // XXX
     switch (boxType) {
-        /*
-         * no container box
-         */
+        /**** **** **** **** **** **** **** ****
+         *         no container box
+         **** **** **** **** **** **** **** ****/
     case "ftyp":
         {
             let brandBytes = arr.subarray(offset, offset + 4);
@@ -161,7 +161,10 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
                 "location:"+location;
         }
         break;
+    case "thmb":
+    case "cdsc":
     case "dimg":
+    case "auxl":
         {
             const fromItemId = dataview.getUint16(offset);
             const itemCount = dataview.getUint16(offset + 2);
@@ -215,9 +218,102 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
             table.omitKey = protectIndex+":"+itemType+":"+itemName;
         }
         break;
-        /*
-         * container box
-         */
+    case "ispe":
+        {
+            // const tmp = dataview.getUint32(offset, false);
+            // const version = tmp >> 24, flags = tmp & 0xffffff;
+            const width  = dataview.getUint32(offset+4, false);
+            const height = dataview.getUint32(offset+8, false);
+            data = // "version:"+version + " flags:"+flags +
+                "width:"+width + " height:"+height;
+        }
+        break;
+    case "colr":
+        {
+            const subtypeBytes = arr.subarray(offset, offset+4);
+            const subtype = String.fromCharCode.apply("", subtypeBytes);
+            data = "subtype:"+subtype;
+        }
+        break;
+    case "pixi":
+        {
+            // const tmp = dataview.getUint32(offset, false);
+            // const version = tmp >> 24, flags = tmp & 0xffffff;
+            const count = arr[offset+4]
+            offset += 5;
+            data = "bits:"
+            for (let i = 0 ; i < count ; i++) {
+                if (i > 0) {
+                    data += ",";
+                }
+                data += arr[offset++];
+            }
+        }
+        break;
+    case "clap":
+        {
+            const width_N    = dataview.getUint32(offset     , false);
+            const width_D    = dataview.getUint32(offset + 4 , false);
+            const height_N   = dataview.getUint32(offset + 8 , false);
+            const height_D   = dataview.getUint32(offset + 12, false);
+            const horiOff_N = dataview.getUint32(offset + 16, false);
+            const horiOff_D = dataview.getUint32(offset + 20, false);
+            const vertOff_N  = dataview.getUint32(offset + 24, false);
+            const vertOFF_D  = dataview.getUint32(offset + 28, false);
+            data = "width:"+width_N+"/"+width_D +
+                " height:"+height_N+"/"+height_D +
+                " horiOff:"+horiOff_N+"/"+horizOff_D +
+                " vertOff:"+vertOff_N+"/"+vertOff_D;
+        }
+        break;
+    case "irot":
+        {
+            const tmp = arr[offset]
+            // |  6bits     | 2bits |
+            // |  reserved  | angle |
+            const angle = tmp & 0x3;
+            data = "angle:"+angle;
+        }
+        break;
+    case "ipma":
+        {
+            const tmp = dataview.getUint32(offset, false);
+            const version = tmp >> 24, flags = tmp & 0xffffff;
+            const entryCount = dataview.getUint32(offset+4, false);
+            offset += 8;
+            data = "count:"+entryCount+" [";
+            for (let i = 0; i < entryCount ; i++) {
+                if (i >= 4) { // max 4
+                    data += " (omit..."+(entryCount - i)+")";;
+                    break;
+                }
+                const itemId = dataview.getUint16(offset, false);
+                offset += 2;
+                const assocCount = arr[offset++];
+                if (i > 0) {
+                    data += " ";
+                }
+                data += "{itemId:"+itemId+" assoc:[";
+                for (let j = 0; j < assocCount ; j++) {
+                    let tmp = arr[offset++];
+                    const essential = tmp >> 7;
+                    if (flags & 1)  {
+                        tmp = (tmp * 0x100) + arr[offset ++];
+                    }
+                    const propertyIndex = tmp;
+                    if (j > 0) {
+                        data+" ";
+                    }
+                    data += "{essen:"+essential+" propIndex:"+propertyIndex+"}";
+                }
+                data += "]}";
+            }
+            data += "]";
+        }
+        break;
+        /**** **** **** **** **** **** **** ****
+         *           container box
+         **** **** **** **** **** **** **** ****/
     case "meta":
     case "iref":
         {
