@@ -18,7 +18,9 @@ function main() {
 function mp4view(arrbuf, parentType, byteOffset, byteLength, maxCount, container, template) {
     const dataview = new DataView(arrbuf);
     let offset = byteOffset;
+    let count = 0;
     let uniq_count = 0;
+    const uniq_maxCount = 4;
     let omit_count = 0;
     let prev_omitKey = null;
     while (offset < byteLength) {
@@ -26,13 +28,15 @@ function mp4view(arrbuf, parentType, byteOffset, byteLength, maxCount, container
         const boxLength = (realLength >= 8)? realLength: byteLength - offset;
         let table = mp4box(arrbuf, parentType, offset, boxLength, realLength,
                            template);
-        if (table.omitKey === prev_omitKey) {
+        if ((table.omitKey !== null) && (table.omitKey === prev_omitKey)) {
             uniq_count ++;
         } else {
             uniq_count = 1;
         }
-        if ((omit_count > 0) &&
-            (uniq_count <  maxCount) || (byteLength < (offset + boxLength))) {
+        const last = (byteLength <= (offset + boxLength)) || (count >= maxCount);
+        const viewOmit = (omit_count > 0) && ((uniq_count === 1) || last);
+        (omit_count > 0) && ((uniq_count === 1) || last);
+        if (viewOmit) {
             const t = document.createElement("table");
             const t_tr = document.createElement("tr");
             const t_td = document.createElement("td");
@@ -43,7 +47,11 @@ function mp4view(arrbuf, parentType, byteOffset, byteLength, maxCount, container
             container.append(t);
             omit_count = 0;
         }
-        if (uniq_count <  maxCount) {
+        if (count > maxCount) {
+            console.warn("container box count limit");
+            break;
+        }
+        if ((uniq_count <  uniq_maxCount) || last) {
             container.append(table);
             omit_count = 0;
         } else {
@@ -51,12 +59,13 @@ function mp4view(arrbuf, parentType, byteOffset, byteLength, maxCount, container
         }
         offset += boxLength;
         prev_omitKey = table.omitKey;
+        count++;
     }
 }
 
 function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
                 template) {
-    let maxCount = 10;
+    let maxCount = 10000;
     const arr = new Uint8Array(arrbuf);
     let boxTypeArr = arr.subarray(boxOffset + 4, boxOffset + 8);
     let boxType = String.fromCharCode.apply("", boxTypeArr);
@@ -75,6 +84,7 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
     let data = null;
     let isContainer = false;
     table.omitKey = null;
+    table.boxType = boxType; // XXX
     switch (boxType) {
         /*
          * no container box
@@ -83,17 +93,15 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
         {
             let brandBytes = arr.subarray(offset, offset + 4);
             let brand = String.fromCharCode.apply("", brandBytes);
-            let minorVersion = dataview.getUint32(offset + 4, false);
+            const minorVersion = dataview.getUint32(offset + 4, false);
             data = "brand:"+brand + ", "+minorVersion;
             offset += 8;
-            let compatiBrands = [];
             while (offset < boxOffset + boxLength) {
                 brandBytes = arr.subarray(offset, offset + 4);
                 brand = String.fromCharCode.apply("", brandBytes);
-                compatiBrands.push(brand);
+                data += ", "+brand;
                 offset += 4;
             }
-            data += ", "+compatiBrands.join(", ");
         }
         break;
     case "hdlr":
@@ -160,7 +168,7 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
             data = "fromId:"+ fromItemId + " count:"+itemCount + " itemIds:";
             offset += 4;
             for (let i = 0 ; i < itemCount ; i++) {
-                if (i >= 7) { // max 7
+                if (i >= 4) { // max 4
                     data += " (omit..."+(itemCount - i)+")";;
                     break;
                 }
@@ -202,7 +210,7 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
             }
             data += " type:"+itemType;
             if (itemName !== "") {
-                data +=+ " name:"+itemName;
+                data += " name:"+itemName;
             }
             table.omitKey = protectIndex+":"+itemType+":"+itemName;
         }
@@ -228,6 +236,7 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
             offset += 8;
             data = // "version:"+version + " flags:"+flags +
                 "count:"+count;
+            maxCount = count;
             isContainer = true;
         }
         break;
@@ -246,6 +255,7 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
             }
             data = // "version:"+version + " flags:"+flags +
                 "count:"+count;
+            maxCount = count;
             isContainer = true;
         }
         break;
