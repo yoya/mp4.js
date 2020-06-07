@@ -272,7 +272,9 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
         tr1.children[1].innerHTML = data;
     }
     if (isContainer) {
-        mp4view(arrbuf, boxType, offset, boxOffset + boxLength, maxCount, tr1.children[2], template);
+        // console.debug("isContainer", boxType, maxCount);
+        mp4view(arrbuf, boxType, offset, boxOffset + boxLength,
+                maxCount, tr1.children[2], template);
     }
     return table;
 }
