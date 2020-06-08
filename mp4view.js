@@ -324,7 +324,7 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
                     let tmp = arr[offset++];
                     const essential = tmp >> 7;
                     if (flags & 1)  {
-                        tmp = (tmp * 0x100) + arr[offset ++];
+                        tmp = (tmp << 8) + arr[offset ++];
                     }
                     const propertyIndex = tmp;
                     if (j > 0) {
