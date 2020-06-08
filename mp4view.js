@@ -141,14 +141,40 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
             const indexSize = (version==0)? null: ((tmp >>  0) & 0xF);
             const itemCount = dataview.getUint16(offset + 6);
             data = // "version:"+version + " flags:"+flags +
-                "count:"+itemCount;
+                "count:"+itemCount+" [";
             offset += 8;
-            /*
-            for (let i = 0 ; i < itemCount ; i++) {
-                let itemId = dataview.getUint16(offset);
-                console.log("itemId:"+itemId);
+            for (let i = 0; i < itemCount; i++) {
+                data += "{";
+                const itemId = dataview.getUint16(offset);
+                offset += 2;
+                data += "itemId:"+itemId;
+                if (version >= 1) {
+                    const constructionMethod = dataview.getUint16(offset);
+                    offset += 2;
+                    data += " method:"+constructionMethod;
+                }
+                const dataReferenceIndex = dataview.getUint16(offset);
+                offset += 2;
+                data += " drefindex:"+dataReferenceIndex;
+                let baseOffset = 0;
+                for (let j = 0 ; j < baseOffsetSize/8 ; j++) {
+                    baseOffset = (baseOffset << 8) + arr[offset++];
+                }
+                const entryCount = dataview.getUint16(offset);
+                offset += 2;
+                data += " [";
+                for (let j = 0; j < entryCount; j++) {
+                    let extendOffset = 0;
+                    for (let k = 0; k < offsetSize/8; k++) {
+                        extendOffset = (extendOffset << 8) + arr[offset++];
+                    }
+                    data += "offset:"+(baseOffset+extendOffset);
+                    break ; // XXX
+                }
+                data += "]}";
+                break; // XXX
             }
-            */
+            data += "]";
         }
         break;
     case "url ":
