@@ -199,10 +199,10 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
             } else {
                 table.omitKey = "";
             }
-            const lastIndex = arr.indexOf(0, offset);
+            const nullIndex = arr.indexOf(0, offset);
             let itemName = "";
-            if (lastIndex >= 0) {
-                const itemNameBytes = arr.subarray(offset, lastIndex);
+            if (nullIndex >= 0) {
+                const itemNameBytes = arr.subarray(offset, nullIndex);
                 itemName = String.fromCharCode.apply("", itemNameBytes);
             } else {
                 console.warn("not fount null terminator for infe itemName");
