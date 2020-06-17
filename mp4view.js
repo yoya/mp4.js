@@ -323,6 +323,7 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
                 for (let j = 0; j < assocCount ; j++) {
                     let tmp = arr[offset++];
                     const essential = tmp >> 7;
+                    tmp &= 0x7F;
                     if (flags & 1)  {
                         tmp = (tmp << 8) + arr[offset ++];
                     }
