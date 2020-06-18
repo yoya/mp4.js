@@ -25,7 +25,10 @@ function mp4view(arrbuf, parentType, byteOffset, byteLength, maxCount, container
     let prev_omitKey = null;
     while (offset < byteLength) {
         const realLength= dataview.getUint32(offset, false); // big-endian
-        const boxLength = (realLength >= 8)? realLength: byteLength - offset;
+        let boxLength = realLength;
+        if (realLength == 1) {
+            boxLength = (dataview.getUint32(offset+8, false) << 32) + dataview.getUint32(offset+12, false)
+        }
         let table = mp4box(arrbuf, parentType, offset, boxLength, realLength,
                            template);
         if ((table.omitKey !== null) && (table.omitKey === prev_omitKey)) {
@@ -80,7 +83,10 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
     tr1.children[0].innerHTML = boxType;
     //
     const dataview = new DataView(arrbuf);
-    let offset = boxOffset + 8;
+    let offset = boxOffset + 4 + 4; // size type
+    if (realLength == 1) {
+        offset = boxOffset + 4 + 4 + 8; // size type extented_size
+    }
     let data = null;
     let isContainer = false;
     table.omitKey = null;
