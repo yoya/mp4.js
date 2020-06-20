@@ -317,6 +317,26 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
             data += "]";
         }
         break;
+    case "hvcC":
+        {
+            const version = reader.getUint8();
+            //  |   2   |  1 |     5     |
+            //  | profs | tf |  procIdc  |
+            const tmp = reader.getUint8();
+            const profileSpace = tmp >> 6;
+            const tierFlag     = (tmp >> 5) & 1;
+            const profileIdc   = tmp & 0x1F;
+            const profileCompatibilityFlags = reader.getUint32();
+            const constraintIndicatorFlags  = reader.getUintN(6);  // 48bit
+            const levelIdc = reader.getUint8();
+            //
+            data = "version:"+version +
+                " profileSpace:"+profileSpace + " tierFlag:"+tierFlag + " profileIdc:"+profileIdc;
+            data += " compatibilityFlags:0x"+profileCompatibilityFlags.toString(16).toUpperCase();
+            data += " constraintFlags:0x"+constraintIndicatorFlags.toString(16).toUpperCase();
+            data += " levelIdc:"+levelIdc;
+        }
+        break;
         /**** **** **** **** **** **** **** ****
          *           container box
          **** **** **** **** **** **** **** ****/
