@@ -153,6 +153,7 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
                 const entryCount = reader.getUint16();
                 data += " [";
                 for (let j = 0; j < entryCount; j++) {
+                    data += "{";
                     let extendOffset = reader.getUintN(offsetSize);
                     data += "offset:"+(baseOffset+extendOffset);
                     if (version >= 1) {
@@ -161,6 +162,7 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
                     }
                     let extentLength = reader.getUintN(lengthSize);
                     data += " length:"+extentLength;
+                    data += "}";
                 }
                 data += "]}";
                 if (i >= 4) { // max 4
@@ -306,7 +308,7 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
                     }
                     const propertyIndex = tmp;
                     if (j > 0) {
-                        data+" ";
+                        data += " ";
                     }
                     data += "{essen:"+essential+" propIndex:"+propertyIndex+"}";
                 }
