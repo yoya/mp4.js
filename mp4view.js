@@ -16,18 +16,19 @@ function main() {
 }
 
 function mp4view(arrbuf, parentType, byteOffset, byteLength, maxCount, container, template) {
-    const dataview = new DataView(arrbuf);
-    let offset = byteOffset;
+    const reader = new ByteReader(arrbuf, byteOffset, false);
     let count = 0;
     let uniq_count = 0;
     const uniq_maxCount = 4;
     let omit_count = 0;
     let prev_omitKey = null;
+    let offset = byteOffset;
     while (offset < byteLength) {
-        const realLength= dataview.getUint32(offset, false); // big-endian
+        reader.setOffset(offset);
+        const realLength= reader.getUint32();
         let boxLength = realLength;
         if (realLength == 1) {
-            boxLength = (dataview.getUint32(offset+8, false) << 32) + dataview.getUint32(offset+12, false)
+            boxLength = reader.getUint64();
         }
         let table = mp4box(arrbuf, parentType, offset, boxLength, realLength,
                            template);
@@ -69,9 +70,8 @@ function mp4view(arrbuf, parentType, byteOffset, byteLength, maxCount, container
 function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
                 template) {
     let maxCount = 10000;
-    const arr = new Uint8Array(arrbuf);
-    let boxTypeArr = arr.subarray(boxOffset + 4, boxOffset + 8);
-    let boxType = String.fromCharCode.apply("", boxTypeArr);
+    const reader = new ByteReader(arrbuf, boxOffset + 4, false);
+    let boxType = reader.getString(4);
     // console.debug(boxType, boxOffset, boxLength);
     const table = template.cloneNode(true);
     const tbody = table.children[0];
@@ -82,11 +82,6 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
     }
     tr1.children[0].innerHTML = boxType;
     //
-    const dataview = new DataView(arrbuf);
-    let offset = boxOffset + 4 + 4; // size type
-    if (realLength == 1) {
-        offset = boxOffset + 4 + 4 + 8; // size type extented_size
-    }
     let data = null;
     let isContainer = false;
     table.omitKey = null;
@@ -97,14 +92,12 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
          **** **** **** **** **** **** **** ****/
     case "ftyp":
         {
-            let brandBytes = arr.subarray(offset, offset + 4);
-            let brand = String.fromCharCode.apply("", brandBytes);
-            const minorVersion = dataview.getUint32(offset + 4, false);
+            let brand = reader.getString(4);
+            const minorVersion = reader.getUint32();
             data = "brand:"+brand + ", "+minorVersion;
-            offset += 8;
+            let offset = reader.getOffset();
             while (offset < boxOffset + boxLength) {
-                brandBytes = arr.subarray(offset, offset + 4);
-                brand = String.fromCharCode.apply("", brandBytes);
+                brand = reader.getString(4)
                 data += ", "+brand;
                 offset += 4;
             }
@@ -112,12 +105,10 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
         break;
     case "hdlr":
         {
-            // const tmp = dataview.getUint32(offset, false);
-            // const version = tmp >> 24, flags = tmp & 0xffffff;
-            const comptypeBytes = arr.subarray(offset + 4, offset + 8);
-            const subtypeBytes = arr.subarray(offset + 8, offset + 12);
-            const comptype = String.fromCharCode.apply("", comptypeBytes);
-            const subtype  = String.fromCharCode.apply("", subtypeBytes);
+            const tmp = reader.getUint32();
+            const version = tmp >> 24, flags = tmp & 0xffffff;
+            const comptype = reader.getString(4);
+            const subtype  = reader.getString(4);
             data = // "version:"+version + " flags:"+flags +
                 "type:" + comptype + " subtype:" + subtype;
             table.omitKey = comptype+":"+subtype;
@@ -125,9 +116,9 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
         break;
     case "pitm":
         {
-            // const tmp = dataview.getUint32(offset, false);
-            // const version = tmp >> 24, flags = tmp & 0xffffff;
-            const itemId = dataview.getUint16(offset + 4, false);
+            const tmp = reader.getUint32();
+            const version = tmp >> 24, flags = tmp & 0xffffff;
+            const itemId = reader.getUint16();
             data = //"version:"+version + " flags:"+flags +
                 "itemId:"+itemId;
         }
@@ -136,43 +127,38 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
         if (parentType === "iref") {
             console.warn(parentType+"=>iloc box not implemented yet.")
         } else {
-            let tmp = dataview.getUint32(offset, false);
+            let tmp = reader.getUint32();
             const version = tmp >> 24, flags = tmp & 0xffffff;
             // |   4 bits   |   4 bits   |     4 bits     |   4 bits  |
             // | offsetSize | lengthSize | baseOffsetSize | indexSize |
-            tmp = dataview.getUint16(offset + 4);
+            tmp = reader.getUint16();
             const offsetSize     = (tmp >> 12) & 0xF;
             const lengthSize     = (tmp >>  8) & 0xF;
             const baseOffsetSize = (tmp >>  4) & 0xF;
             const indexSize = (version==0)? null: ((tmp >>  0) & 0xF);
-            const itemCount = dataview.getUint16(offset + 6);
+            const itemCount = reader.getUint16()
             data = // "version:"+version + " flags:"+flags +
                 "count:"+itemCount+" [";
-            offset += 8;
             for (let i = 0; i < itemCount; i++) {
                 data += "{";
-                const itemId = dataview.getUint16(offset);
-                offset += 2;
+                const itemId = reader.getUint16();
                 data += "itemId:"+itemId;
                 if (version >= 1) {
-                    const constructionMethod = dataview.getUint16(offset);
-                    offset += 2;
+                    const constructionMethod = reader.getUint16()
                     data += " method:"+constructionMethod;
                 }
-                const dataReferenceIndex = dataview.getUint16(offset);
-                offset += 2;
+                const dataReferenceIndex = reader.getUint16();
                 data += " drefindex:"+dataReferenceIndex;
                 let baseOffset = 0;
                 for (let j = 0 ; j < baseOffsetSize/8 ; j++) {
-                    baseOffset = (baseOffset << 8) + arr[offset++];
+                    baseOffset = (baseOffset << 8) + reader.getUint8();
                 }
-                const entryCount = dataview.getUint16(offset);
-                offset += 2;
+                const entryCount = reader.getUint16();
                 data += " [";
                 for (let j = 0; j < entryCount; j++) {
                     let extendOffset = 0;
                     for (let k = 0; k < offsetSize/8; k++) {
-                        extendOffset = (extendOffset << 8) + arr[offset++];
+                        extendOffset = (extendOffset << 8) + reader.getUint8();
                     }
                     data += "offset:"+(baseOffset+extendOffset);
                     break ; // XXX
@@ -185,10 +171,9 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
         break;
     case "url ":
         {
-            // const tmp = dataview.getUint32(offset, false);
-            // const version = tmp >> 24, flags = tmp & 0xffffff;
-            const locationBytes = arr.subarray(offset + 4, boxOffset + boxLength);
-            const location = String.fromCharCode.apply("", locationBytes);
+            const tmp = reader.getUint32();
+            const version = tmp >> 24, flags = tmp & 0xffffff;
+            const location = reader.getString(4);
             data = // "version:"+version + " flags:"+flags +
                 "location:"+location;
         }
@@ -198,10 +183,9 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
     case "dimg":
     case "auxl":
         {
-            const fromItemId = dataview.getUint16(offset);
-            const itemCount = dataview.getUint16(offset + 2);
+            const fromItemId = reader.getUint16();
+            const itemCount = reader.getUint16();
             data = "fromId:"+ fromItemId + " count:"+itemCount + " itemIds:";
-            offset += 4;
             for (let i = 0 ; i < itemCount ; i++) {
                 if (i >= 4) { // max 4
                     data += " (omit..."+(itemCount - i)+")";;
@@ -210,35 +194,24 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
                 if (i > 0) {
                     data += ",";
                 }
-                let itemId = dataview.getUint16(offset);
+                let itemId = reader.getUint16();
                 data += itemId;
-                offset += 2;
             }
         }
         break;
     case "infe":
         {
-            const tmp = dataview.getUint32(offset, false);
+            const tmp = reader.getUint32();
             const version = tmp >> 24, flags = tmp & 0xffffff;
-            let itemId = dataview.getUint16(offset + 4);
-            let protectIndex = dataview.getUint16(offset + 6);
-            offset += 8;
+            let itemId = reader.getUint16();
+            let protectIndex = reader.getUint16();
             let itemType = "";
             if (version) {
-                const itemTypeBytes = arr.subarray(offset, offset + 4);
-                itemType = String.fromCharCode.apply("", itemTypeBytes);
-                offset += 4;
+                itemType = reader.getString(4);
             } else {
                 table.omitKey = "";
             }
-            const nullIndex = arr.indexOf(0, offset);
-            let itemName = "";
-            if (nullIndex >= 0) {
-                const itemNameBytes = arr.subarray(offset, nullIndex);
-                itemName = String.fromCharCode.apply("", itemNameBytes);
-            } else {
-                console.warn("not fount null terminator for infe itemName");
-            }
+            let itemName = reader.getStringNullTerminate();
             data = "itemId:"+itemId;
             if (protectIndex > 0) {
                 data += " protectIndex:"+protectIndex;
@@ -252,46 +225,44 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
         break;
     case "ispe":
         {
-            // const tmp = dataview.getUint32(offset, false);
-            // const version = tmp >> 24, flags = tmp & 0xffffff;
-            const width  = dataview.getUint32(offset+4, false);
-            const height = dataview.getUint32(offset+8, false);
+            const tmp = reader.getUint32();
+            const version = tmp >> 24, flags = tmp & 0xffffff;
+            const width  = reader.getUint32();
+            const height = reader.getUint32();
             data = // "version:"+version + " flags:"+flags +
                 "width:"+width + " height:"+height;
         }
         break;
     case "colr":
         {
-            const subtypeBytes = arr.subarray(offset, offset+4);
-            const subtype = String.fromCharCode.apply("", subtypeBytes);
+            const subtype = reader.getString(4);
             data = "subtype:"+subtype;
         }
         break;
     case "pixi":
         {
-            // const tmp = dataview.getUint32(offset, false);
-            // const version = tmp >> 24, flags = tmp & 0xffffff;
-            const count = arr[offset+4]
-            offset += 5;
+            const tmp = reader.getUint32();
+            const version = tmp >> 24, flags = tmp & 0xffffff;
+            const count = reader.getUint8();
             data = "bits:"
             for (let i = 0 ; i < count ; i++) {
                 if (i > 0) {
                     data += ",";
                 }
-                data += arr[offset++];
+                data += reader.getUint8();
             }
         }
         break;
     case "clap":
         {
-            const width_N    = dataview.getUint32(offset     , false);
-            const width_D    = dataview.getUint32(offset + 4 , false);
-            const height_N   = dataview.getUint32(offset + 8 , false);
-            const height_D   = dataview.getUint32(offset + 12, false);
-            const horiOff_N = dataview.getUint32(offset + 16, false);
-            const horiOff_D = dataview.getUint32(offset + 20, false);
-            const vertOff_N  = dataview.getUint32(offset + 24, false);
-            const vertOFF_D  = dataview.getUint32(offset + 28, false);
+            const width_N    = reader.getUint32();
+            const width_D    = reader.getUint32();
+            const height_N   = reader.getUint32();
+            const height_D   = reader.getUint32();
+            const horiOff_N  = reader.getUint32();
+            const horiOff_D  = reader.getUint32();
+            const vertOff_N  = reader.getUint32();
+            const vertOFF_D  = reader.getUint32();
             data = "width:"+width_N+"/"+width_D +
                 " height:"+height_N+"/"+height_D +
                 " horiOff:"+horiOff_N+"/"+horizOff_D +
@@ -300,38 +271,35 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
         break;
     case "irot":
         {
-            const tmp = arr[offset]
             // |  6bits     | 2bits |
             // |  reserved  | angle |
-            const angle = tmp & 0x3;
+            const angle = reader.getUint8() & 0x3;
             data = "angle:"+angle;
         }
         break;
     case "ipma":
         {
-            const tmp = dataview.getUint32(offset, false);
+            const tmp = reader.getUint32();
             const version = tmp >> 24, flags = tmp & 0xffffff;
-            const entryCount = dataview.getUint32(offset+4, false);
-            offset += 8;
+            const entryCount = reader.getUint32();
             data = "count:"+entryCount+" [";
             for (let i = 0; i < entryCount ; i++) {
                 if (i >= 4) { // max 4
                     data += " (omit..."+(entryCount - i)+")";;
                     break;
                 }
-                const itemId = dataview.getUint16(offset, false);
-                offset += 2;
-                const assocCount = arr[offset++];
+                const itemId = reader.getUint16();
+                const assocCount = reader.getUint8();
                 if (i > 0) {
                     data += " ";
                 }
                 data += "{itemId:"+itemId+" assoc:[";
                 for (let j = 0; j < assocCount ; j++) {
-                    let tmp = arr[offset++];
+                    let tmp = reader.getUint8();
                     const essential = tmp >> 7;
                     tmp &= 0x7F;
                     if (flags & 1)  {
-                        tmp = (tmp << 8) + arr[offset ++];
+                        tmp = (tmp << 8) + reader.getUint8();
                     }
                     const propertyIndex = tmp;
                     if (j > 0) {
@@ -350,19 +318,17 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
     case "meta":
     case "iref":
         {
-            const tmp = dataview.getUint32(offset, false);
+            const tmp = reader.getUint32();
             // const version = tmp >> 24, flags = tmp & 0xffffff;
             // data = "version:"+version + " flags:"+flags;
-            offset += 4;
             isContainer = true;
         }
         break;
     case "dref":
         {
-            // const tmp = dataview.getUint32(offset, false);
-            // const version = tmp >> 24, flags = tmp & 0xffffff;
-            const count = dataview.getUint32(offset + 4, false);
-            offset += 8;
+            const tmp = reader.getUint32();
+            const version = tmp >> 24, flags = tmp & 0xffffff;
+            const count = reader.getUint32();
             data = // "version:"+version + " flags:"+flags +
                 "count:"+count;
             maxCount = count;
@@ -371,16 +337,13 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
         break;
     case "iinf":
         {
-            const tmp = dataview.getUint32(offset, false);
+            const tmp = reader.getUint32();
             const version = tmp >> 24, flags = tmp & 0xffffff;
-            offset += 4;
             let count;
             if (version <= 1) {
-                count = dataview.getUint16(offset, false);
-                offset += 2;
+                count = reader.getUint16();
             } else {
-                count = dataview.getUint32(offset, false);
-                offset += 4;
+                count = reader.getUint32();
             }
             data = // "version:"+version + " flags:"+flags +
                 "count:"+count;
@@ -402,6 +365,7 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
     }
     if (isContainer) {
         // console.debug("isContainer", boxType, maxCount);
+        const offset = reader.getOffset();
         mp4view(arrbuf, boxType, offset, boxOffset + boxLength,
                 maxCount, tr1.children[2], template);
     }
