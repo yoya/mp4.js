@@ -149,22 +149,25 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
                 }
                 const dataReferenceIndex = reader.getUint16();
                 data += " drefindex:"+dataReferenceIndex;
-                let baseOffset = 0;
-                for (let j = 0 ; j < baseOffsetSize/8 ; j++) {
-                    baseOffset = (baseOffset << 8) + reader.getUint8();
-                }
+                let baseOffset = reader.getUintN(baseOffsetSize);
                 const entryCount = reader.getUint16();
                 data += " [";
                 for (let j = 0; j < entryCount; j++) {
-                    let extendOffset = 0;
-                    for (let k = 0; k < offsetSize/8; k++) {
-                        extendOffset = (extendOffset << 8) + reader.getUint8();
-                    }
+                    let extendOffset = reader.getUintN(offsetSize);
                     data += "offset:"+(baseOffset+extendOffset);
-                    break ; // XXX
+                    if (version >= 1) {
+                        let extentIndex = reader.getUintN(indexSize);
+                        data += " extentIndex:"+extentIndex
+                    }
+                    let extentLength = reader.getUintN(lengthSize);
+                    data += " length:"+extentLength;
                 }
                 data += "]}";
-                break; // XXX
+                if (i >= 4) { // max 4
+                    data += " (omit..."+(itemCount - i)+")";;
+                    break;
+                }
+
             }
             data += "]";
         }
