@@ -269,6 +269,14 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
             }
         }
         break;
+    case "pasp":
+        {
+            const vspace = reader.getUint32();
+            const hspace = reader.getUint32();
+            data = "vspace:"+vspace + " hspace:"+hspace;
+
+        }
+        break;
     case "clap":
         {
             const width_N    = reader.getUint32();
