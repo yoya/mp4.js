@@ -15,6 +15,14 @@ function main() {
     }, "ArrayBuffer");
 }
 
+function toHexNumber(v, d){
+    let h = v.toString(16).toUpperCase();
+    if (h.length < d) {
+        h = '0'.repeat(d - h.length) + h;
+    }
+    return h;
+}
+
 function mp4view(arrbuf, parentType, byteOffset, byteLength, maxCount, container, template) {
     const reader = new ByteReader(arrbuf, byteOffset, false);
     let count = 0;
@@ -66,6 +74,9 @@ function mp4view(arrbuf, parentType, byteOffset, byteLength, maxCount, container
         count++;
     }
 }
+
+const ProfileIdcDescTable = ["Unknown profile", "Main profile", "Main 10 profile", "Main still Picture profile", "Format range extentions"];
+const ChromaDescTable = ["Grayscale", "YUV420", "YUV422", "YUV444"];
 
 function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
                 template) {
@@ -329,12 +340,59 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
             const profileCompatibilityFlags = reader.getUint32();
             const constraintIndicatorFlags  = reader.getUintN(6);  // 48bit
             const levelIdc = reader.getUint8();
+            // |   4    |            12             |
+            // |reserved| minSpatialSegmentationIdc |
+            const minSpatialSegmentationIdc = reader.getUint16() & 0xFFF;
+            // |       6       |   2   |
+            // |   reserved    | pType |
+            const parallelismType = reader.getUint8() & 0x3;
+            // |       6       |   2   |
+            // |   reserved    | chroma|
+            const chromaFormat = reader.getUint8() & 0x3;
+            // |       5     |    3    |
+            // |   reserved  |  depth  |
+            const bitDepthLumaMinus8 = reader.getUint8() & 0x7;
+            // |       5     |    3    |
+            // |   reserved  |  depth  |
+            const bitDepthChromaMinus8 = reader.getUint8() & 0x7;
+            const avgFrameRate = reader.getUint16();
             //
-            data = "version:"+version +
-                " profileSpace:"+profileSpace + " tierFlag:"+tierFlag + " profileIdc:"+profileIdc;
-            data += " compatibilityFlags:0x"+profileCompatibilityFlags.toString(16).toUpperCase();
-            data += " constraintFlags:0x"+constraintIndicatorFlags.toString(16).toUpperCase();
-            data += " levelIdc:"+levelIdc;
+            data = // "version:"+version +
+                "profileSpace:"+profileSpace + " tierFlag:"+tierFlag + " profileIdc:"+profileIdc;
+            data += "("+ProfileIdcDescTable[profileIdc]+")";
+            data += " compatibilityFlags:0x"+toHexNumber(profileCompatibilityFlags, 8);
+            data += " constraintFlags:0x"+toHexNumber(constraintIndicatorFlags, 12);
+            data += " levelIdc:"+levelIdc + " chroma:"+chromaFormat;
+            data += "("+ChromaDescTable[chromaFormat]+")";
+            data += " bitDepth:("+(bitDepthLumaMinus8+8);
+            data += ","+(bitDepthChromaMinus8+8)+")";
+        }
+        break;
+    case "av1C":
+        {
+            const tmp1 = reader.getUint8();
+            const marker = (tmp1 >> 7), version = tmp1 & 0x7F;
+            // | 3  |    5     |
+            // | sp |  slidx   |
+            const tmp2 = reader.getUint8();
+            const seq_profile = (tmp2 >> 5), seq_level_idx_0 = tmp2 & 0x1F;
+            // |  1 |  1 |  1 |  1 |  1 |  1 |   2   |
+            // | st | hq | tb | mc | cx | cy |   cp  |
+            const tmp3 = reader.getUint8();
+            const seq_tier_0             =  tmp3 >> 7;
+            const high_bitdepth          = (tmp3 >> 6) & 1;
+            const twelve_bit             = (tmp3 >> 5) & 1;
+            const monochrome             = (tmp3 >> 4) & 1;
+            const chroma_subsampling_x   = (tmp3 >> 3) & 1;
+            const chroma_subsampling_y   = (tmp3 >> 2) & 1;
+            const chroma_sample_position =  tmp3 & 3;
+            data = "marker:"+marker + " version:"+version +
+                " profile:"+seq_profile + " level_idx_0:"+seq_level_idx_0 +
+                " tier_0:"+seq_tier_0 + "high_bitdepth:"+high_bitdepth +
+                " twelve_bit:"+twelve_bit + " monochrome:"+monochrome +
+                " subsampling_x:"+chroma_subsampling_x +
+                " subsampling_y:"+chroma_subsampling_y +
+                "chroma_sample_position:"+chroma_sample_position;
         }
         break;
         /**** **** **** **** **** **** **** ****
