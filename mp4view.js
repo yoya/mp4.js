@@ -286,10 +286,10 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
             const horiOff_N  = reader.getUint32();
             const horiOff_D  = reader.getUint32();
             const vertOff_N  = reader.getUint32();
-            const vertOFF_D  = reader.getUint32();
+            const vertOff_D  = reader.getUint32();
             data = "width:"+width_N+"/"+width_D +
                 " height:"+height_N+"/"+height_D +
-                " horiOff:"+horiOff_N+"/"+horizOff_D +
+                " horiOff:"+horiOff_N+"/"+horiOff_D +
                 " vertOff:"+vertOff_N+"/"+vertOff_D;
         }
         break;
