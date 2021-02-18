@@ -396,11 +396,11 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
             const chroma_sample_position =  tmp3 & 3;
             data = "marker:"+marker + " version:"+version +
                 " profile:"+seq_profile + " level_idx_0:"+seq_level_idx_0 +
-                " tier_0:"+seq_tier_0 + "high_bitdepth:"+high_bitdepth +
+                " tier_0:"+seq_tier_0 + " high_bitdepth:"+high_bitdepth +
                 " twelve_bit:"+twelve_bit + " monochrome:"+monochrome +
                 " subsampling_x:"+chroma_subsampling_x +
                 " subsampling_y:"+chroma_subsampling_y +
-                "chroma_sample_position:"+chroma_sample_position;
+                " chroma_sample_position:"+chroma_sample_position;
         }
         break;
         /**** **** **** **** **** **** **** ****
