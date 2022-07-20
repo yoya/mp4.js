@@ -33,13 +33,27 @@ function mp4view(arrbuf, parentType, byteOffset, byteLength, maxCount, container
     let offset = byteOffset;
     while (offset < byteLength) {
         reader.setOffset(offset);
-        const realLength= reader.getUint32();
-        let boxLength = realLength;
-        if (realLength == 1) {
-            boxLength = reader.getUint64();
+        const remainLen = byteLength - offset;
+        let boxLength;
+        let realLength = 0;
+        let tailtrash = false;
+        if (remainLen >= 4) {
+            realLength = reader.getUint32();
+            if (realLength == 1) {
+                boxLength = reader.getUint64();
+            } else {
+                boxLength = realLength;
+            }
+        } else {
+            tailtrash = true;
+            boxLength = remainLen;
+        }
+        if ((boxLength === 0) || (boxLength > remainLen) {
+            tailtrash = true;
+            boxLength = remainLen;
         }
         let table = mp4box(arrbuf, parentType, offset, boxLength, realLength,
-                           template);
+                           tailtrash, template);
         if ((table.omitKey !== null) && (table.omitKey === prev_omitKey)) {
             uniq_count ++;
         } else {
@@ -78,17 +92,21 @@ function mp4view(arrbuf, parentType, byteOffset, byteLength, maxCount, container
 const ProfileIdcDescTable = ["Unknown profile", "Main profile", "Main 10 profile", "Main still Picture profile", "Format range extentions"];
 const ChromaDescTable = ["Grayscale", "YUV420", "YUV422", "YUV444"];
 
+// realLength: 32bit length field value.
 function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
-                template) {
+                tailtrash, template) {
     let maxCount = 10000;
     const reader = new ByteReader(arrbuf, boxOffset + 4, false);
-    let boxType = reader.getString(4);
+    let boxType = "";
+    if (! tailtrash) {
+        boxType = reader.getString(4);
+    }
     // console.debug(boxType, boxOffset, boxLength);
     const table = template.cloneNode(true);
     const tbody = table.children[0];
     const [tr0, tr1] = tbody.children;
     tr0.children[0].innerHTML = "offset:"+boxOffset+" length:"+boxLength;
-    if (boxLength !== realLength) {
+    if  ((boxLength !== realLength) && (! tailtrash)) {
         tr0.children[0].innerHTML += "("+realLength+")";
     }
     tr1.children[0].innerHTML = boxType;
@@ -449,6 +467,18 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
     case "iprp":
     case "ipco":
         isContainer = true;
+        break;
+    case "":
+        /**** **** **** **** **** **** **** ****
+         * no box. trashed data on binary tail.
+         **** **** **** **** **** **** **** ****/
+        reader.setOffset(boxOffset);
+        data = "(trashed data) len:"+boxLength;
+        for (let i = 0; i < boxLength; i++) {
+            const v = reader.getUint8();
+            const h = toHexNumber(v, 2);
+            data += " " + h + "(" + v + ")";
+        }
         break;
     }
     if (data !== null) {
