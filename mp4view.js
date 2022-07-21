@@ -109,7 +109,11 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
     if  ((boxLength !== realLength) && (! tailtrash)) {
         tr0.children[0].innerHTML += "("+realLength+")";
     }
-    tr1.children[0].innerHTML = boxType;
+    if (boxType !== "") {
+        tr1.children[0].innerHTML = boxType;
+    } else {
+        tr1.children[0].innerHTML = "(trash)";
+    }
     //
     let data = null;
     let isContainer = false;
@@ -475,7 +479,7 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
          * no box. trashed data on binary tail.
          **** **** **** **** **** **** **** ****/
         reader.setOffset(boxOffset);
-        data = "(trashed data) len:"+boxLength;
+        data = "";
         for (let i = 0; i < boxLength; i++) {
             const v = reader.getUint8();
             const h = toHexNumber(v, 2);
