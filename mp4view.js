@@ -179,12 +179,14 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
                 const dataReferenceIndex = reader.getUint16();
                 data += " drefindex:"+dataReferenceIndex;
                 let baseOffset = reader.getUintN(baseOffsetSize);
+                data += " baseOffset:"+baseOffset;
                 const entryCount = reader.getUint16();
                 data += " [";
                 for (let j = 0; j < entryCount; j++) {
                     data += "{";
                     let extendOffset = reader.getUintN(offsetSize);
-                    data += "offset:"+(baseOffset+extendOffset);
+                    data += " extendOffset:"+extendOffset;
+                    data += "(offset:"+(baseOffset+extendOffset)+")";
                     if (version >= 1) {
                         let extentIndex = reader.getUintN(indexSize);
                         data += " extentIndex:"+extentIndex
