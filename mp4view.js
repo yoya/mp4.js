@@ -48,7 +48,7 @@ function mp4view(arrbuf, parentType, byteOffset, byteLength, maxCount, container
             tailtrash = true;
             boxLength = remainLen;
         }
-        if ((boxLength === 0) || (boxLength > remainLen) {
+        if ((boxLength === 0) || (boxLength > remainLen)) {
             tailtrash = true;
             boxLength = remainLen;
         }
