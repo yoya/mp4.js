@@ -186,7 +186,7 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
                     data += "{";
                     let extendOffset = reader.getUintN(offsetSize);
                     data += " extendOffset:"+extendOffset;
-                    data += "(offset:"+(baseOffset+extendOffset)+")";
+                    data += " (offset:"+(baseOffset+extendOffset)+")";
                     if (version >= 1) {
                         let extentIndex = reader.getUintN(indexSize);
                         data += " extentIndex:"+extentIndex
