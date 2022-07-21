@@ -480,7 +480,12 @@ function mp4box(arrbuf, parentType, boxOffset, boxLength, realLength,
          **** **** **** **** **** **** **** ****/
         reader.setOffset(boxOffset);
         data = "";
+        const omitMax = 256;
         for (let i = 0; i < boxLength; i++) {
+            if (omitMax <= i) {
+                data += " (omit...)";
+                break;
+            }
             const v = reader.getUint8();
             const h = toHexNumber(v, 2);
             data += " " + h + "(" + v + ")";
